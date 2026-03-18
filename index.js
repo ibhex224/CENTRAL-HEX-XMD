@@ -107,16 +107,16 @@ function buildHelpMenu() {
 //   QUIZ DATA
 // ════════════════════════════════════════
 const QUIZ_QUESTIONS = [
-  { q: '🎌 Dans quel anime apparaît Naruto Uzumaki ?',         r: 'naruto' },
-  { q: '⚔️ Quel est le nom du titan fondateur dans AoT ?',     r: 'ymir' },
-  { q: '🌊 Qui est le capitaine du Chapeau de Paille ?',        r: 'luffy' },
-  { q: '⚡ Pokémon de départ feu de Kanto ?',                   r: 'salamèche' },
-  { q: '🃏 Quel est le surnom de Killua Zoldyck ?',             r: 'kil' },
-  { q: '🔥 Comment s\'appelle l\'épée de Demon Slayer ?',       r: 'nichirin' },
-  { q: '💀 Quel est le fruit du diable de Luffy ?',             r: 'gomu gomu' },
-  { q: '🧪 Dans quel anime Levi Ackerman apparaît-il ?',        r: 'attack on titan' },
-  { q: '🌙 Quel est le vrai nom de Sailor Moon ?',              r: 'usagi' },
-  { q: '🐉 Comment s\'appelle le dragon de Natsu ?',            r: 'igneel' },
+  { q: '🎌 Dans quel anime apparaît Naruto Uzumaki ?',     r: 'naruto' },
+  { q: '⚔️ Quel est le nom du titan fondateur dans AoT ?', r: 'ymir' },
+  { q: '🌊 Qui est le capitaine du Chapeau de Paille ?',    r: 'luffy' },
+  { q: '⚡ Pokémon de départ feu de Kanto ?',               r: 'salamèche' },
+  { q: '🃏 Quel est le surnom de Killua Zoldyck ?',         r: 'kil' },
+  { q: '🔥 Comment s\'appelle l\'épée de Demon Slayer ?',   r: 'nichirin' },
+  { q: '💀 Quel est le fruit du diable de Luffy ?',         r: 'gomu gomu' },
+  { q: '🧪 Dans quel anime Levi Ackerman apparaît-il ?',    r: 'attack on titan' },
+  { q: '🌙 Quel est le vrai nom de Sailor Moon ?',          r: 'usagi' },
+  { q: '🐉 Comment s\'appelle le dragon de Natsu ?',        r: 'igneel' },
 ];
 
 const quizScores  = new Map();
@@ -141,55 +141,46 @@ async function createSession(phoneNumber, sessionId) {
     markOnlineOnConnect: false,
   });
 
-  // ════════════════════════════════════
-  //   ✅ FIX — PAIRING CODE CORRIGÉ
-  // ════════════════════════════════════
-
-
   sock.ev.on('creds.update', saveCreds);
 
-  // ── CONNEXION ──
+  // ════════════════════════════════════
+  //   CONNEXION + PAIRING CODE
+  // ════════════════════════════════════
   sock.ev.on('connection.update', async ({ connection, lastDisconnect }) => {
+
+    // Demander le code dès connecting
+    if (connection === 'connecting' && !sock.authState.creds.registered) {
+      try {
+        await new Promise(r => setTimeout(r, 2000));
+        const cleanNumber = phoneNumber
+          .replace(/[^0-9]/g, '')
+          .replace(/^0+/, '');
+        console.log(`📱 Demande code pour: ${cleanNumber}`);
+        const code = await sock.requestPairingCode(cleanNumber);
+        const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
+        sessionCache.set(sessionId, {
+          code: formattedCode,
+          status: 'pending',
+          phone: cleanNumber
+        });
+        console.log(`✅ Code: ${formattedCode}`);
+      } catch (err) {
+        sessionCache.set(sessionId, {
+          code: null,
+          status: 'error',
+          error: err.message
+        });
+        console.error('❌ Erreur pairing:', err.message);
+      }
+    }
+
+    // Bot connecté
     if (connection === 'open') {
       console.log(`🟢 Session ${sessionId} connectée !`);
       activeSessions.set(sessionId, sock);
       sessionCache.set(sessionId, { status: 'connected', phone: phoneNumber });
 
-      await sock.sendMessage(phoneNumber if (!sock.authState.creds.registered) {
-  await new Promise((resolve) => {
-    const handler = async ({ connection, isOnline }) => {
-      if (connection === 'connecting' || isOnline === true) {
-        sock.ev.off('connection.update', handler);
-        try {
-          await new Promise(r => setTimeout(r, 2000));
-          const cleanNumber = phoneNumber
-            .replace(/[^0-9]/g, '')
-            .replace(/^0+/, '');
-          console.log(`📱 Demande code pour: ${cleanNumber}`);
-          const code = await sock.requestPairingCode(cleanNumber);
-          const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
-          sessionCache.set(sessionId, {
-            code: formattedCode,
-            status: 'pending',
-            phone: cleanNumber
-          });
-          console.log(`✅ Code: ${formattedCode}`);
-        } catch (err) {
-          sessionCache.set(sessionId, {
-            code: null,
-            status: 'error',
-            error: err.message
-          });
-          console.error('❌ Erreur:', err.message);
-        }
-        resolve();
-      }
-    };
-    sock.ev.on('connection.update', handler);
-    // Timeout de sécurité 10s
-    setTimeout(resolve, 10000);
-  });
-      }+ '@s.whatsapp.net', {
+      await sock.sendMessage(phoneNumber + '@s.whatsapp.net', {
         image: { url: BOT_IMG },
         caption:
           `╔══════════════════════╗\n` +
@@ -205,7 +196,7 @@ async function createSession(phoneNumber, sessionId) {
     } else if (connection === 'close') {
       const code            = lastDisconnect?.error?.output?.statusCode;
       const shouldReconnect = code !== DisconnectReason.loggedOut;
-      console.log(`🔴 Session ${sessionId} fermée. Reconnexion: ${shouldReconnect}`);
+      console.log(`🔴 Session fermée. Reconnexion: ${shouldReconnect}`);
       activeSessions.delete(sessionId);
       if (shouldReconnect) setTimeout(() => createSession(phoneNumber, sessionId), 5000);
     }
@@ -229,7 +220,7 @@ async function createSession(phoneNumber, sessionId) {
     const args = body.slice(PREFIX.length).trim().split(/\s+/).slice(1);
     const text = args.join(' ');
 
-    // ── RÉPONSE QUIZ EN ATTENTE ──
+    // Quiz en attente
     if (pendingQuiz.has(from)) {
       const expected = pendingQuiz.get(from);
       if (cmd.includes(expected)) {
@@ -250,33 +241,18 @@ async function createSession(phoneNumber, sessionId) {
 
     if (!body.startsWith(PREFIX)) return;
 
-    // ════════════════════════════════════
-    //   🛠️ UTILITAIRES
-    // ════════════════════════════════════
-
     if (cmd === `${PREFIX}help`) {
-      await sock.sendMessage(from, {
-        image: { url: BOT_IMG },
-        caption: buildHelpMenu()
-      });
+      await sock.sendMessage(from, { image: { url: BOT_IMG }, caption: buildHelpMenu() });
     }
-
     else if (cmd === `${PREFIX}ping`) {
       const ms = Date.now();
       await sock.sendMessage(from, {
-        text:
-          `╭━━〔 🏓 PING 〕━━┈⊷\n` +
-          `┃✰│ Pong  : ${Date.now() - ms}ms\n` +
-          `┃✰│ Status : En ligne ✅\n` +
-          `╰━━━━━━━━━━━━━━━┈⊷`
+        text: `╭━━〔 🏓 PING 〕━━┈⊷\n┃✰│ Pong : ${Date.now() - ms}ms\n┃✰│ Status : En ligne ✅\n╰━━━━━━━━━━━━━━━┈⊷`
       });
     }
-
     else if (cmd === `${PREFIX}stats`) {
       const u = Math.floor((Date.now() - startTime) / 1000);
-      const h = Math.floor(u / 3600);
-      const m = Math.floor((u % 3600) / 60);
-      const s = u % 60;
+      const h = Math.floor(u/3600), m = Math.floor((u%3600)/60), s = u%60;
       await sock.sendMessage(from, {
         image: { url: BOT_IMG },
         caption:
@@ -285,11 +261,9 @@ async function createSession(phoneNumber, sessionId) {
           `┃✰│ Sessions : ${activeSessions.size}\n` +
           `┃✰│ Uptime   : ${h}h ${m}m ${s}s\n` +
           `┃✰│ Version  : 2.0\n` +
-          `╰━━━━━━━━━━━━━━━┈⊷\n\n` +
-          `👤 ${CREATOR} 🇬🇳`
+          `╰━━━━━━━━━━━━━━━┈⊷\n\n👤 ${CREATOR} 🇬🇳`
       });
     }
-
     else if (cmd === `${PREFIX}info`) {
       await sock.sendMessage(from, {
         image: { url: BOT_IMG },
@@ -303,195 +277,103 @@ async function createSession(phoneNumber, sessionId) {
           `╰━━━━━━━━━━━━━━━┈⊷`
       });
     }
-
     else if (cmd === `${PREFIX}time`) {
       const now = new Date().toLocaleString('fr-FR', { timeZone: 'Africa/Conakry' });
       await sock.sendMessage(from, {
-        text:
-          `╭━━〔 🕐 HEURE 〕━━┈⊷\n` +
-          `┃✰│ ${now}\n` +
-          `┃✰│ Fuseau : Guinée 🇬🇳\n` +
-          `╰━━━━━━━━━━━━━━━┈⊷`
+        text: `╭━━〔 🕐 HEURE 〕━━┈⊷\n┃✰│ ${now}\n┃✰│ Fuseau : Guinée 🇬🇳\n╰━━━━━━━━━━━━━━━┈⊷`
       });
     }
-
-    // ════════════════════════════════════
-    //   🤖 IA & ASSISTANCE
-    // ════════════════════════════════════
-
     else if (cmd.startsWith(`${PREFIX}ia `) || cmd.startsWith(`${PREFIX}gpt `)) {
       await sock.sendMessage(from, {
-        text:
-          `╭━━〔 🤖 IA CENTRAL-HEX-XDM 〕━━┈⊷\n` +
-          `┃✰│ Question : ${text}\n` +
-          `┃✰│ Réponse  : Fonctionnalité\n` +
-          `┃✰│ disponible via config Groq.\n` +
-          `┃✰│ Contact  : ${CONTACT}\n` +
-          `╰━━━━━━━━━━━━━━━┈⊷`
+        text: `╭━━〔 🤖 IA CENTRAL-HEX-XDM 〕━━┈⊷\n┃✰│ Question : ${text}\n┃✰│ Contact  : ${CONTACT}\n╰━━━━━━━━━━━━━━━┈⊷`
       });
     }
-
-    // ════════════════════════════════════
-    //   🎮 JEUX & DIVERTISSEMENT
-    // ════════════════════════════════════
-
     else if (cmd === `${PREFIX}quiz`) {
       const q = QUIZ_QUESTIONS[Math.floor(Math.random() * QUIZ_QUESTIONS.length)];
       pendingQuiz.set(from, q.r);
       setTimeout(() => pendingQuiz.delete(from), 30000);
       await sock.sendMessage(from, {
-        text:
-          `╭━━〔 🎮 QUIZ 〕━━┈⊷\n` +
-          `┃✰│ ${q.q}\n` +
-          `┃✰│ ⏱️ 30 secondes !\n` +
-          `╰━━━━━━━━━━━━━━━┈⊷`
+        text: `╭━━〔 🎮 QUIZ 〕━━┈⊷\n┃✰│ ${q.q}\n┃✰│ ⏱️ 30 secondes !\n╰━━━━━━━━━━━━━━━┈⊷`
       });
     }
-
     else if (cmd === `${PREFIX}quizscore`) {
       const score = quizScores.get(sender) || 0;
       await sock.sendMessage(from, {
-        text:
-          `╭━━〔 🏆 SCORE QUIZ 〕━━┈⊷\n` +
-          `┃✰│ Joueur : ${sender.split('@')[0]}\n` +
-          `┃✰│ Score  : ${score} point(s)\n` +
-          `╰━━━━━━━━━━━━━━━┈⊷`
+        text: `╭━━〔 🏆 SCORE QUIZ 〕━━┈⊷\n┃✰│ Joueur : ${sender.split('@')[0]}\n┃✰│ Score  : ${score} point(s)\n╰━━━━━━━━━━━━━━━┈⊷`
       });
     }
-
     else if (cmd === `${PREFIX}pile` || cmd === `${PREFIX}jeu pile`) {
       const result = Math.random() > 0.5 ? '🟡 PILE' : '⚪ FACE';
       await sock.sendMessage(from, {
-        text:
-          `╭━━〔 🪙 PILE OU FACE 〕━━┈⊷\n` +
-          `┃✰│ Résultat : *${result}*\n` +
-          `╰━━━━━━━━━━━━━━━┈⊷`
+        text: `╭━━〔 🪙 PILE OU FACE 〕━━┈⊷\n┃✰│ Résultat : *${result}*\n╰━━━━━━━━━━━━━━━┈⊷`
       });
     }
-
     else if (cmd === `${PREFIX}blague`) {
       const blagues = [
-        'Pourquoi les plongeurs plongent-ils toujours en arrière ? Parce que sinon ils tomberaient dans le bateau ! 😂',
+        'Pourquoi les plongeurs plongent-ils en arrière ? Sinon ils tomberaient dans le bateau ! 😂',
         'Qu\'est-ce qu\'un canif ? Un petit fien ! 😄',
-        'Pourquoi l\'épouvantail a-t-il eu un prix ? Parce qu\'il était exceptionnel dans son domaine ! 🌾',
-        'Comment appelle-t-on un chat tombé dans un pot de peinture ? Un chat-peint ! 🎨',
+        'Pourquoi l\'épouvantail a eu un prix ? Il était exceptionnel dans son domaine ! 🌾',
+        'Un chat tombé dans un pot de peinture ? Un chat-peint ! 🎨',
       ];
       await sock.sendMessage(from, {
-        text:
-          `╭━━〔 😂 BLAGUE DU JOUR 〕━━┈⊷\n` +
-          `┃✰│ ${blagues[Math.floor(Math.random() * blagues.length)]}\n` +
-          `╰━━━━━━━━━━━━━━━┈⊷`
+        text: `╭━━〔 😂 BLAGUE DU JOUR 〕━━┈⊷\n┃✰│ ${blagues[Math.floor(Math.random() * blagues.length)]}\n╰━━━━━━━━━━━━━━━┈⊷`
       });
     }
-
     else if (cmd.startsWith(`${PREFIX}8ball `)) {
       const reponses = [
-        '✅ Oui, absolument !', '✅ C\'est certain !', '✅ Sans aucun doute !',
-        '❓ Peut-être...', '❓ C\'est flou, réessaie.', '❓ Difficile à dire.',
-        '❌ Non, définitivement.', '❌ Mes sources disent non.', '❌ Ne compte pas là-dessus.',
+        '✅ Oui, absolument !','✅ C\'est certain !','✅ Sans aucun doute !',
+        '❓ Peut-être...','❓ C\'est flou, réessaie.','❓ Difficile à dire.',
+        '❌ Non, définitivement.','❌ Mes sources disent non.','❌ Ne compte pas là-dessus.',
       ];
       await sock.sendMessage(from, {
-        text:
-          `╭━━〔 🎱 8BALL 〕━━┈⊷\n` +
-          `┃✰│ ❓ ${text}\n` +
-          `┃✰│ ${reponses[Math.floor(Math.random() * reponses.length)]}\n` +
-          `╰━━━━━━━━━━━━━━━┈⊷`
+        text: `╭━━〔 🎱 8BALL 〕━━┈⊷\n┃✰│ ❓ ${text}\n┃✰│ ${reponses[Math.floor(Math.random()*reponses.length)]}\n╰━━━━━━━━━━━━━━━┈⊷`
       });
     }
-
     else if (cmd.startsWith(`${PREFIX}love`)) {
       const pct = Math.floor(Math.random() * 101);
-      const bar = '❤️'.repeat(Math.floor(pct / 10)) + '🖤'.repeat(10 - Math.floor(pct / 10));
+      const bar = '❤️'.repeat(Math.floor(pct/10)) + '🖤'.repeat(10-Math.floor(pct/10));
       const msg = pct > 80 ? '🔥 C\'est l\'amour fou !' : pct > 50 ? '💛 Ça promet !' : '💔 Peut mieux faire...';
       await sock.sendMessage(from, {
-        text:
-          `╭━━〔 💕 LOVE METER 〕━━┈⊷\n` +
-          `┃✰│ ${bar}\n` +
-          `┃✰│ Score : *${pct}%*\n` +
-          `┃✰│ ${msg}\n` +
-          `╰━━━━━━━━━━━━━━━┈⊷`
+        text: `╭━━〔 💕 LOVE METER 〕━━┈⊷\n┃✰│ ${bar}\n┃✰│ Score : *${pct}%*\n┃✰│ ${msg}\n╰━━━━━━━━━━━━━━━┈⊷`
       });
     }
-
-    // ════════════════════════════════════
-    //   👥 GESTION DE GROUPE
-    // ════════════════════════════════════
-
     else if (cmd === `${PREFIX}tagall` || cmd.startsWith(`${PREFIX}hidetag`)) {
       try {
         const groupMeta = await sock.groupMetadata(from);
         const members   = groupMeta.participants.map(p => p.id);
         const isHide    = cmd.startsWith(`${PREFIX}hidetag`);
         await sock.sendMessage(from, {
-          text: isHide
-            ? (text || '📢 Message du groupe')
-            : `╭━━〔 📢 TAGALL 〕━━┈⊷\n${text || ''}\n\n${members.map(m => `@${m.split('@')[0]}`).join(' ')}\n╰━━━━━━━━━━━━━━━┈⊷`,
+          text: isHide ? (text || '📢 Message') : `╭━━〔 📢 TAGALL 〕━━┈⊷\n${text||''}\n\n${members.map(m=>`@${m.split('@')[0]}`).join(' ')}\n╰━━━━━━━━━━━━━━━┈⊷`,
           mentions: members
         });
       } catch {
-        await sock.sendMessage(from, {
-          text: `╭━━〔 ❌ ERREUR 〕━━┈⊷\n┃✰│ Commande réservée aux groupes.\n╰━━━━━━━━━━━━━━━┈⊷`
-        });
+        await sock.sendMessage(from, { text: `╭━━〔 ❌ ERREUR 〕━━┈⊷\n┃✰│ Commande réservée aux groupes.\n╰━━━━━━━━━━━━━━━┈⊷` });
       }
     }
-
     else if (cmd === `${PREFIX}open`) {
       try {
         await sock.groupSettingUpdate(from, 'not_announcement');
-        await sock.sendMessage(from, {
-          text: `╭━━〔 🔓 GROUPE OUVERT 〕━━┈⊷\n┃✰│ Tous les membres peuvent écrire.\n╰━━━━━━━━━━━━━━━┈⊷`
-        });
+        await sock.sendMessage(from, { text: `╭━━〔 🔓 GROUPE OUVERT 〕━━┈⊷\n┃✰│ Tous les membres peuvent écrire.\n╰━━━━━━━━━━━━━━━┈⊷` });
       } catch {
-        await sock.sendMessage(from, {
-          text: `╭━━〔 ❌ ERREUR 〕━━┈⊷\n┃✰│ Tu dois être admin.\n╰━━━━━━━━━━━━━━━┈⊷`
-        });
+        await sock.sendMessage(from, { text: `╭━━〔 ❌ ERREUR 〕━━┈⊷\n┃✰│ Tu dois être admin.\n╰━━━━━━━━━━━━━━━┈⊷` });
       }
     }
-
     else if (cmd === `${PREFIX}close`) {
       try {
         await sock.groupSettingUpdate(from, 'announcement');
-        await sock.sendMessage(from, {
-          text: `╭━━〔 🔒 GROUPE FERMÉ 〕━━┈⊷\n┃✰│ Admins seulement.\n╰━━━━━━━━━━━━━━━┈⊷`
-        });
+        await sock.sendMessage(from, { text: `╭━━〔 🔒 GROUPE FERMÉ 〕━━┈⊷\n┃✰│ Admins seulement.\n╰━━━━━━━━━━━━━━━┈⊷` });
       } catch {
-        await sock.sendMessage(from, {
-          text: `╭━━〔 ❌ ERREUR 〕━━┈⊷\n┃✰│ Tu dois être admin.\n╰━━━━━━━━━━━━━━━┈⊷`
-        });
+        await sock.sendMessage(from, { text: `╭━━〔 ❌ ERREUR 〕━━┈⊷\n┃✰│ Tu dois être admin.\n╰━━━━━━━━━━━━━━━┈⊷` });
       }
     }
-
-    // ════════════════════════════════════
-    //   📥 TÉLÉCHARGEMENT
-    // ════════════════════════════════════
-
-    else if (
-      cmd.startsWith(`${PREFIX}yt `)     ||
-      cmd.startsWith(`${PREFIX}tiktok `) ||
-      cmd.startsWith(`${PREFIX}ig `)     ||
-      cmd.startsWith(`${PREFIX}fb `)     ||
-      cmd.startsWith(`${PREFIX}mp3 `)
-    ) {
+    else if (cmd.startsWith(`${PREFIX}yt `)||cmd.startsWith(`${PREFIX}tiktok `)||cmd.startsWith(`${PREFIX}ig `)||cmd.startsWith(`${PREFIX}fb `)||cmd.startsWith(`${PREFIX}mp3 `)) {
       await sock.sendMessage(from, {
-        text:
-          `╭━━〔 📥 TÉLÉCHARGEMENT 〕━━┈⊷\n` +
-          `┃✰│ 🔗 Lien reçu !\n` +
-          `┃✰│ ⚙️ Traitement en cours...\n` +
-          `┃✰│ Contact : ${CONTACT}\n` +
-          `╰━━━━━━━━━━━━━━━┈⊷`
+        text: `╭━━〔 📥 TÉLÉCHARGEMENT 〕━━┈⊷\n┃✰│ 🔗 Lien reçu !\n┃✰│ ⚙️ Traitement en cours...\n┃✰│ Contact : ${CONTACT}\n╰━━━━━━━━━━━━━━━┈⊷`
       });
     }
-
-    // ════════════════════════════════════
-    //   COMMANDE INCONNUE
-    // ════════════════════════════════════
     else {
       await sock.sendMessage(from, {
-        text:
-          `╭━━〔 ❓ COMMANDE INCONNUE 〕━━┈⊷\n` +
-          `┃✰│ Tape *${PREFIX}help* pour voir\n` +
-          `┃✰│ toutes les commandes.\n` +
-          `╰━━━━━━━━━━━━━━━┈⊷`
+        text: `╭━━〔 ❓ COMMANDE INCONNUE 〕━━┈⊷\n┃✰│ Tape *${PREFIX}help* pour voir\n┃✰│ toutes les commandes.\n╰━━━━━━━━━━━━━━━┈⊷`
       });
     }
   });
@@ -506,8 +388,7 @@ app.post('/api/pair', async (req, res) => {
   let { phone } = req.body;
   if (!phone) return res.status(400).json({ success: false, error: 'Numéro requis' });
   phone = phone.replace(/[^0-9]/g, '').replace(/^0+/, '');
-  if (phone.length < 9)
-    return res.status(400).json({ success: false, error: 'Numéro invalide' });
+  if (phone.length < 9) return res.status(400).json({ success: false, error: 'Numéro invalide' });
   const sessionId = 'session_' + phone + '_' + Date.now();
   res.json({ success: true, sessionId });
   createSession(phone, sessionId).catch(err =>
@@ -522,11 +403,7 @@ app.get('/api/code/:sessionId', (req, res) => {
 });
 
 app.get('/api/stats', (req, res) => {
-  res.json({
-    sessions: activeSessions.size,
-    uptime:   Math.floor((Date.now() - startTime) / 1000),
-    status:   'online',
-  });
+  res.json({ sessions: activeSessions.size, uptime: Math.floor((Date.now()-startTime)/1000), status: 'online' });
 });
 
 app.get('/',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
@@ -536,13 +413,5 @@ app.get('/connect', (req, res) => res.sendFile(path.join(__dirname, 'public', 'c
 //   DÉMARRAGE
 // ════════════════════════════════════════
 app.listen(PORT, () => {
-  console.log(
-    `\n╔══════════════════════════╗` +
-    `\n║   ${BOT_NAME} v2.0   ║` +
-    `\n╚══════════════════════════╝` +
-    `\n🚀 Port     : ${PORT}` +
-    `\n👤 Créateur : ${CREATOR} 🇬🇳` +
-    `\n📱 Contact  : ${CONTACT}\n`
-  );
+  console.log(`\n╔══════════════════════════╗\n║   ${BOT_NAME} v2.0   ║\n╚══════════════════════════╝\n🚀 Port     : ${PORT}\n👤 Créateur : ${CREATOR} 🇬🇳\n📱 Contact  : ${CONTACT}\n`);
 });
-
