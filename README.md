@@ -5,7 +5,7 @@
 
 <!-- BOT IMAGE -->
 <br/>
-<img src="https://files.catbox.moe/3ukol4.jpg" width="700" style="border-radius:50%"/>
+<img src="https://i.ibb.co/S4Bq8FGC/file-0000000019fc722f9717382cd6600e56.png" width="700" style="border-radius:50%"/>
 <br/><br/>
 
 <!-- ANIMATED TYPING -->
