@@ -1,0 +1,20 @@
+{
+  "name": "central-hex-xdm",
+  "version": "2.0.0",
+  "description": "CENTRAL-HEX-XDM WhatsApp Bot by Ibrahima Sory Sacko",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.9",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "pino": "^8.21.0",
+    "node-cache": "^5.1.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+
