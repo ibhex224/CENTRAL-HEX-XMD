@@ -150,32 +150,31 @@ async function createSession(phoneNumber, sessionId) {
   //   PAS dans connection.update
   // ════════════════════════════════════
   if (!sock.authState.creds.registered) {
-    // Attendre que le socket soit prêt
-    await new Promise(r => setTimeout(r, 1500));
-    try {
-      // Numéro propre : chiffres seulement
-      const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
-      console.log(`📱 Demande pairing code pour: ${cleanNumber}`);
-
-      const code = await sock.requestPairingCode(cleanNumber);
-      const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
-
-      sessionCache.set(sessionId, {
-        code: formattedCode,
-        status: 'pending',
-        phone: cleanNumber
-      });
-      console.log(`✅ Pairing code: ${formattedCode}`);
-    } catch (err) {
-      console.error('❌ Erreur pairing:', err.message);
-      sessionCache.set(sessionId, {
-        code: null,
-        status: 'error',
-        error: err.message
-      });
-    }
+  await new Promise((resolve) => {
+    sock.ev.on('connection.update', async ({ connection }) => {
+      if (connection === 'connecting') {
+        await new Promise(r => setTimeout(r, 500));
+        try {
+          const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+          console.log(`📱 Code pour: ${cleanNumber}`);
+          const code = await sock.requestPairingCode(cleanNumber);
+          const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
+          sessionCache.set(sessionId, {
+            code: formattedCode,
+            status: 'pending',
+            phone: cleanNumber
+          });
+          console.log(`✅ Code: ${formattedCode}`);
+        } catch (err) {
+          console.error('❌', err.message);
+          sessionCache.set(sessionId, { status: 'error', error: err.message });
+        }
+        resolve();
+      }
+    });
+    setTimeout(resolve, 15000);
+  });
   }
-
   // ════════════════════════════════════
   //   CONNEXION
   // ════════════════════════════════════
