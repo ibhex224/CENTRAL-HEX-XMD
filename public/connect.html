@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CENTRAL-HEX-XDM — Connexion</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--black:#0a0a0a;--white:#f5f5f0;--gray:#1a1a1a;--mid:#888;--border:rgba(255,255,255,0.12);--success:#4ade80;--danger:#ff4444;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--black);color:var(--white);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;cursor:none;}
+    .cursor{width:12px;height:12px;background:#fff;border-radius:50%;position:fixed;pointer-events:none;z-index:9999;mix-blend-mode:difference;}
+    .cursor-ring{width:36px;height:36px;border:1px solid rgba(255,255,255,0.5);border-radius:50%;position:fixed;pointer-events:none;z-index:9998;transition:width 0.3s,height 0.3s;mix-blend-mode:difference;}
+    body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:0.4;}
+    .stars{position:fixed;inset:0;overflow:hidden;z-index:0;pointer-events:none;}
+    .star{position:absolute;background:white;border-radius:50%;animation:twinkle var(--dur,3s) infinite var(--delay,0s);}
+    @keyframes twinkle{0%,100%{opacity:0.1;transform:scale(1)}50%{opacity:0.8;transform:scale(1.4)}}
+    .bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px);background-size:50px 50px;mask-image:radial-gradient(ellipse 70% 70% at 50% 50%,black 30%,transparent 100%);}
+    nav{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:1.2rem 2rem;border-bottom:1px solid var(--border);backdrop-filter:blur(20px);background:rgba(10,10,10,0.7);}
+    .back-btn{font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.15em;color:var(--mid);text-decoration:none;text-transform:uppercase;transition:color 0.2s;display:flex;align-items:center;gap:0.5rem;}
+    .back-btn:hover{color:var(--white);}
+    .nav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.15em;}
+    .nav-logo span{color:var(--mid);}
+    .online-badge{display:flex;align-items:center;gap:0.5rem;font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;color:var(--success);border:1px solid rgba(74,222,128,0.2);padding:0.3rem 0.8rem;}
+    .dot-green{width:7px;height:7px;background:var(--success);border-radius:50%;animation:blink 2s infinite;flex-shrink:0;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+    main{flex:1;display:flex;align-items:center;justify-content:center;padding:3rem 1.5rem;position:relative;z-index:1;}
+    .connect-wrapper{width:100%;max-width:460px;animation:fadeUp 0.7s 0.2s both;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+    .card{border:1px solid var(--border);background:rgba(255,255,255,0.03);backdrop-filter:blur(30px);padding:2.5rem 2rem;position:relative;overflow:hidden;}
+    .card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent);}
+    .bot-img{width:90px;height:90px;border-radius:50%;border:1px solid rgba(255,255,255,0.2);overflow:hidden;margin:0 auto 1.2rem auto;box-shadow:0 0 30px rgba(255,255,255,0.06);}
+    .bot-img img{width:100%;height:100%;object-fit:cover;}
+    .card-eyebrow{font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:0.25em;color:var(--mid);text-transform:uppercase;margin-bottom:1rem;}
+    .card-title{font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;letter-spacing:0.05em;margin-bottom:0.3rem;}
+    .card-title .hollow{color:transparent;-webkit-text-stroke:1px rgba(255,255,255,0.4);}
+    .card-subtitle{font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.2em;color:var(--mid);text-transform:uppercase;margin-bottom:1.5rem;}
+    .creator-chip{display:inline-flex;align-items:center;gap:0.6rem;border:1px solid var(--border);padding:0.4rem 1rem;font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.08em;margin-bottom:2rem;background:rgba(255,255,255,0.04);}
+    .form-label{font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:0.2em;color:var(--mid);text-transform:uppercase;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.7rem;}
+    .input-wrapper{position:relative;margin-bottom:1.5rem;}
+    .input-wrapper input{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--white);font-family:'Space Mono',monospace;font-size:0.85rem;padding:0.9rem 1rem 0.9rem 3rem;outline:none;transition:border-color 0.2s,background 0.2s;}
+    .input-wrapper input::placeholder{color:rgba(136,136,136,0.5);}
+    .input-wrapper input:focus{border-color:rgba(255,255,255,0.35);background:rgba(255,255,255,0.07);}
+    .input-icon{position:absolute;left:1rem;top:50%;transform:translateY(-50%);pointer-events:none;}
+    .btn-generate{width:100%;background:var(--white);color:var(--black);border:none;padding:1.1rem;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.2em;cursor:pointer;transition:transform 0.2s;display:flex;align-items:center;justify-content:center;gap:0.8rem;}
+    .btn-generate:hover{transform:translateY(-2px);}
+    .btn-generate.loading{pointer-events:none;background:var(--gray);color:var(--mid);}
+    .spinner{display:none;width:18px;height:18px;border:2px solid rgba(136,136,136,0.3);border-top-color:var(--mid);border-radius:50%;animation:spin 0.8s linear infinite;}
+    .btn-generate.loading .spinner{display:block;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .code-section{margin-top:1.5rem;display:none;animation:fadeUp 0.5s both;}
+    .code-section.show{display:block;}
+    .code-label{font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:0.2em;color:var(--mid);text-transform:uppercase;margin-bottom:0.7rem;}
+    .code-box{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);padding:1.2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;}
+    .code-value{font-family:'Bebas Neue',sans-serif;font-size:2.5rem;letter-spacing:0.2em;}
+    .code-value .sep{color:var(--mid);}
+    .copy-btn{background:none;border:1px solid var(--border);color:var(--mid);padding:0.5rem 0.9rem;font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
+    .copy-btn:hover{background:var(--white);color:var(--black);border-color:var(--white);}
+    .steps-box{margin-top:1rem;border:1px solid var(--border);padding:1rem;background:rgba(255,255,255,0.02);}
+    .step{display:flex;align-items:flex-start;gap:0.8rem;padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.8rem;color:var(--mid);line-height:1.5;}
+    .step:last-child{border-bottom:none;}
+    .step-num{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--white);flex-shrink:0;width:20px;}
+    .countdown-bar{margin-top:0.8rem;height:2px;background:rgba(255,255,255,0.1);}
+    .countdown-fill{height:100%;background:var(--white);width:100%;transition:width 1s linear;}
+    .countdown-text{font-family:'Space Mono',monospace;font-size:0.55rem;letter-spacing:0.1em;color:var(--mid);margin-top:0.4rem;text-align:right;}
+    .stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin-top:1.5rem;}
+    .stat-box{background:var(--black);padding:1.2rem;text-align:center;transition:background 0.2s;}
+    .stat-box:hover{background:var(--gray);}
+    .stat-val{font-family:'Bebas Neue',sans-serif;font-size:2rem;line-height:1;}
+    .stat-val.green{color:var(--success);}
+    .stat-lbl{font-family:'Space Mono',monospace;font-size:0.55rem;letter-spacing:0.15em;color:var(--mid);text-transform:uppercase;margin-top:0.3rem;}
+    .alert{display:none;font-family:'Space Mono',monospace;font-size:0.7rem;border:1px solid;padding:0.7rem 1rem;margin-top:1rem;}
+    .alert.error{color:var(--danger);border-color:rgba(255,68,68,0.25);background:rgba(255,68,68,0.05);}
+    .alert.success{color:var(--success);border-color:rgba(74,222,128,0.25);background:rgba(74,222,128,0.05);}
+    .alert.show{display:block;}
+    footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:1.2rem 2rem;display:flex;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap;}
+    .footer-text{font-family:'Space Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;color:rgba(136,136,136,0.5);text-transform:uppercase;}
+  </style>
+</head>
+<body>
+  <div class="cursor" id="cursor"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+  <div class="stars" id="stars"></div>
+  <div class="bg-grid"></div>
+
+  <nav>
+    <a href="/" class="back-btn">← Retour Accueil</a>
+    <div class="nav-logo">CENTRAL<span>-</span>HEX</div>
+    <div class="online-badge"><div class="dot-green"></div>ONLINE</div>
+  </nav>
+
+  <main>
+    <div class="connect-wrapper">
+      <div class="card">
+
+        <!-- IMAGE DU BOT -->
+        <div class="bot-img">
+          <img src="https://i.ibb.co/sp7vYJt5/1772381137526.png" alt="CENTRAL-HEX-XDM"/>
+        </div>
+
+        <p class="card-eyebrow">// Panneau de connexion</p>
+        <h1 class="card-title">CENTRAL<br><span class="hollow">HEX</span><br>XDM</h1>
+        <p class="card-subtitle">Connexion Multi-Device</p>
+        <div class="creator-chip"><div class="dot-green"></div>Ibrahima Sory Sacko 🇬🇳</div>
+
+        <p class="form-label">📱 Numéro WhatsApp</p>
+        <div class="input-wrapper">
+          <span class="input-icon">📲</span>
+          <input type="tel" id="phoneInput" placeholder="Ex: 224621963059" maxlength="15"/>
+        </div>
+
+        <button class="btn-generate" id="generateBtn" onclick="generateCode()">
+          <span id="btnText">⚡ Générer le Code ⚡</span>
+          <div class="spinner"></div>
+        </button>
+
+        <div class="alert error" id="errorMsg"></div>
+        <div class="alert success" id="successMsg"></div>
+
+        <div class="code-section" id="codeSection">
+          <p class="code-label">// Code de connexion WhatsApp</p>
+          <div class="code-box">
+            <div class="code-value" id="codeDisplay">----<span class="sep">-</span>----</div>
+            <button class="copy-btn" onclick="copyCode()">Copier</button>
+          </div>
+          <div class="steps-box">
+            <div class="step"><span class="step-num">1</span><span>Ouvre <strong>WhatsApp</strong> sur ton téléphone</span></div>
+            <div class="step"><span class="step-num">2</span><span>Va dans <strong>Paramètres → Appareils connectés</strong></span></div>
+            <div class="step"><span class="step-num">3</span><span>Appuie sur <strong>"Connecter un appareil"</strong></span></div>
+            <div class="step"><span class="step-num">4</span><span>Choisis <strong>"Connecter avec un numéro"</strong></span></div>
+            <div class="step"><span class="step-num">5</span><span>Saisis le code affiché ci-dessus ✅</span></div>
+          </div>
+          <div class="countdown-bar"><div class="countdown-fill" id="countdownFill"></div></div>
+          <p class="countdown-text" id="countdownText">Expire dans 60s</p>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-box"><div class="stat-val" id="statSessions">—</div><div class="stat-lbl">Sessions</div></div>
+          <div class="stat-box"><div class="stat-val green">●</div><div class="stat-lbl">Online</div></div>
+          <div class="stat-box"><div class="stat-val" id="statUptime">—</div><div class="stat-lbl">Uptime</div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span class="footer-text">⚡ CENTRAL-HEX-XDM</span>
+    <span class="footer-text">•</span>
+    <span class="footer-text">Ibrahima Sory Sacko 🇬🇳</span>
+    <span class="footer-text">•</span>
+    <span class="footer-text">Tous droits réservés</span>
+  </footer>
+
+  <script>
+    const cursor=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
+    let mx=0,my=0,rx=0,ry=0;
+    document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx-6+'px';cursor.style.top=my-6+'px';});
+    function animRing(){rx+=(mx-rx)*0.12;ry+=(my-ry)*0.12;ring.style.left=rx-18+'px';ring.style.top=ry-18+'px';requestAnimationFrame(animRing);}
+    animRing();
+    const starsEl=document.getElementById('stars');
+    for(let i=0;i<60;i++){const s=document.createElement('div');s.className='star';const sz=Math.random()*2+1;s.style.cssText=`width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--dur:${Math.random()*4+2}s;--delay:${Math.random()*4}s;`;starsEl.appendChild(s);}
+    async function loadStats(){
+      try{
+        const r=await fetch('/api/stats');const d=await r.json();
+        document.getElementById('statSessions').textContent=d.sessions;
+        const u=d.uptime;const h=Math.floor(u/3600),m=Math.floor((u%3600)/60),s=u%60;
+        document.getElementById('statUptime').textContent=u<60?s+'s':u<3600?m+'m':h+'h'+m+'m';
+      }catch(e){}
+    }
+    loadStats();setInterval(loadStats,5000);
+    let countdownTimer=null;
+    async function generateCode(){
+      const phone=document.getElementById('phoneInput').value.replace(/[\s\-\+\(\)]/g,'');
+      const errorMsg=document.getElementById('errorMsg');
+      const successMsg=document.getElementById('successMsg');
+      const btn=document.getElementById('generateBtn');
+      const btnText=document.getElementById('btnText');
+      errorMsg.classList.remove('show');successMsg.classList.remove('show');
+      if(!phone||phone.length<9||isNaN(phone)){errorMsg.textContent='⚠ Numéro invalide. Ex: 224621963059';errorMsg.classList.add('show');return;}
+      btn.classList.add('loading');btnText.textContent='Connexion au serveur...';
+      try{
+        const res=await fetch('/api/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone})});
+        const data=await res.json();
+        if(!data.success)throw new Error(data.error);
+        btnText.textContent='Génération du code...';
+        pollForCode(data.sessionId,btn,btnText,errorMsg,successMsg);
+      }catch(err){
+        btn.classList.remove('loading');btnText.textContent='⚡ Générer le Code ⚡';
+        errorMsg.textContent='❌ Erreur: '+err.message;errorMsg.classList.add('show');
+      }
+    }
+    async function pollForCode(sessionId,btn,btnText,errorMsg,successMsg){
+      let attempts=0;
+      const poll=setInterval(async()=>{
+        attempts++;
+        try{
+          const res=await fetch('/api/code/'+sessionId);const data=await res.json();
+          if(data.status==='pending'&&data.code){clearInterval(poll);showCode(data.code);btn.classList.remove('loading');btnText.textContent='⚡ Générer le Code ⚡';}
+          else if(data.status==='connected'){clearInterval(poll);btn.classList.remove('loading');btnText.textContent='⚡ Générer le Code ⚡';successMsg.textContent='✅ Bot connecté ! Vérifie tes messages WhatsApp.';successMsg.classList.add('show');}
+          else if(data.status==='error'){clearInterval(poll);btn.classList.remove('loading');btnText.textContent='⚡ Générer le Code ⚡';errorMsg.textContent='❌ '+(data.error||'Erreur inconnue');errorMsg.classList.add('show');}
+          else if(attempts>20){clearInterval(poll);btn.classList.remove('loading');btnText.textContent='⚡ Générer le Code ⚡';errorMsg.textContent='⏱ Délai dépassé. Réessaie.';errorMsg.classList.add('show');}
+        }catch(e){}
+      },1500);
+    }
+    function showCode(code){
+      const parts=code.split('-');
+      document.getElementById('codeDisplay').innerHTML=(parts[0]||'----')+'<span class="sep">-</span>'+(parts[1]||'----');
+      document.getElementById('codeSection').classList.add('show');
+      if(countdownTimer)clearInterval(countdownTimer);
+      let t=60;
+      const fill=document.getElementById('countdownFill'),txt=document.getElementById('countdownText');
+      fill.style.width='100%';
+      countdownTimer=setInterval(()=>{t--;fill.style.width=(t/60*100)+'%';txt.textContent='Expire dans '+t+'s';if(t<=0){clearInterval(countdownTimer);txt.textContent='⚠ Code expiré — Regénère un nouveau code';fill.style.width='0%';}},1000);
+    }
+    function copyCode(){
+      const code=document.getElementById('codeDisplay').textContent;
+      navigator.clipboard.writeText(code).then(()=>{const b=document.querySelector('.copy-btn');b.textContent='✓ Copié';setTimeout(()=>b.textContent='Copier',2000);});
+    }
+    document.getElementById('phoneInput').addEventListener('keydown',e=>{if(e.key==='Enter')generateCode();});
+  </script>
+</body>
+</html>
+
