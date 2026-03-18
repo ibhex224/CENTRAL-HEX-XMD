@@ -31,7 +31,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-const sessionCache   = new NodeCache({ stdTTL: 120 });
+const sessionCache   = new NodeCache({ stdTTL: 300 });
 const activeSessions = new Map();
 const startTime      = Date.now();
 const logger         = pino({ level: 'silent' });
@@ -137,46 +137,52 @@ async function createSession(phoneNumber, sessionId) {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, logger),
     },
-    browser: [BOT_NAME, 'Chrome', '120.0.0'],
+    browser: ['Ubuntu', 'Chrome', '120.0.0'],
     markOnlineOnConnect: false,
+    connectTimeoutMs: 60000,
   });
 
   sock.ev.on('creds.update', saveCreds);
 
   // ════════════════════════════════════
-  //   CONNEXION + PAIRING CODE
+  //   ✅ PAIRING CODE — BONNE MÉTHODE
+  //   Appelé juste après création socket
+  //   PAS dans connection.update
+  // ════════════════════════════════════
+  if (!sock.authState.creds.registered) {
+    // Attendre que le socket soit prêt
+    await new Promise(r => setTimeout(r, 1500));
+    try {
+      // Numéro propre : chiffres seulement
+      const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+      console.log(`📱 Demande pairing code pour: ${cleanNumber}`);
+
+      const code = await sock.requestPairingCode(cleanNumber);
+      const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
+
+      sessionCache.set(sessionId, {
+        code: formattedCode,
+        status: 'pending',
+        phone: cleanNumber
+      });
+      console.log(`✅ Pairing code: ${formattedCode}`);
+    } catch (err) {
+      console.error('❌ Erreur pairing:', err.message);
+      sessionCache.set(sessionId, {
+        code: null,
+        status: 'error',
+        error: err.message
+      });
+    }
+  }
+
+  // ════════════════════════════════════
+  //   CONNEXION
   // ════════════════════════════════════
   sock.ev.on('connection.update', async ({ connection, lastDisconnect }) => {
 
-    // Demander le code dès connecting
-    if (connection === 'connecting' && !sock.authState.creds.registered) {
-      try {
-        await new Promise(r => setTimeout(r, 2000));
-        const cleanNumber = phoneNumber
-          .replace(/[^0-9]/g, '')
-          .replace(/^0+/, '');
-        console.log(`📱 Demande code pour: ${cleanNumber}`);
-        const code = await sock.requestPairingCode(cleanNumber);
-        const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
-        sessionCache.set(sessionId, {
-          code: formattedCode,
-          status: 'pending',
-          phone: cleanNumber
-        });
-        console.log(`✅ Code: ${formattedCode}`);
-      } catch (err) {
-        sessionCache.set(sessionId, {
-          code: null,
-          status: 'error',
-          error: err.message
-        });
-        console.error('❌ Erreur pairing:', err.message);
-      }
-    }
-
-    // Bot connecté
     if (connection === 'open') {
-      console.log(`🟢 Session ${sessionId} connectée !`);
+      console.log(`🟢 Bot connecté !`);
       activeSessions.set(sessionId, sock);
       sessionCache.set(sessionId, { status: 'connected', phone: phoneNumber });
 
@@ -194,9 +200,9 @@ async function createSession(phoneNumber, sessionId) {
       });
 
     } else if (connection === 'close') {
-      const code            = lastDisconnect?.error?.output?.statusCode;
-      const shouldReconnect = code !== DisconnectReason.loggedOut;
-      console.log(`🔴 Session fermée. Reconnexion: ${shouldReconnect}`);
+      const statusCode     = lastDisconnect?.error?.output?.statusCode;
+      const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+      console.log(`🔴 Connexion fermée. Code: ${statusCode}. Reconnexion: ${shouldReconnect}`);
       activeSessions.delete(sessionId);
       if (shouldReconnect) setTimeout(() => createSession(phoneNumber, sessionId), 5000);
     }
@@ -343,7 +349,9 @@ async function createSession(phoneNumber, sessionId) {
         const members   = groupMeta.participants.map(p => p.id);
         const isHide    = cmd.startsWith(`${PREFIX}hidetag`);
         await sock.sendMessage(from, {
-          text: isHide ? (text || '📢 Message') : `╭━━〔 📢 TAGALL 〕━━┈⊷\n${text||''}\n\n${members.map(m=>`@${m.split('@')[0]}`).join(' ')}\n╰━━━━━━━━━━━━━━━┈⊷`,
+          text: isHide
+            ? (text || '📢 Message')
+            : `╭━━〔 📢 TAGALL 〕━━┈⊷\n${text||''}\n\n${members.map(m=>`@${m.split('@')[0]}`).join(' ')}\n╰━━━━━━━━━━━━━━━┈⊷`,
           mentions: members
         });
       } catch {
@@ -366,7 +374,13 @@ async function createSession(phoneNumber, sessionId) {
         await sock.sendMessage(from, { text: `╭━━〔 ❌ ERREUR 〕━━┈⊷\n┃✰│ Tu dois être admin.\n╰━━━━━━━━━━━━━━━┈⊷` });
       }
     }
-    else if (cmd.startsWith(`${PREFIX}yt `)||cmd.startsWith(`${PREFIX}tiktok `)||cmd.startsWith(`${PREFIX}ig `)||cmd.startsWith(`${PREFIX}fb `)||cmd.startsWith(`${PREFIX}mp3 `)) {
+    else if (
+      cmd.startsWith(`${PREFIX}yt `)     ||
+      cmd.startsWith(`${PREFIX}tiktok `) ||
+      cmd.startsWith(`${PREFIX}ig `)     ||
+      cmd.startsWith(`${PREFIX}fb `)     ||
+      cmd.startsWith(`${PREFIX}mp3 `)
+    ) {
       await sock.sendMessage(from, {
         text: `╭━━〔 📥 TÉLÉCHARGEMENT 〕━━┈⊷\n┃✰│ 🔗 Lien reçu !\n┃✰│ ⚙️ Traitement en cours...\n┃✰│ Contact : ${CONTACT}\n╰━━━━━━━━━━━━━━━┈⊷`
       });
@@ -387,7 +401,8 @@ async function createSession(phoneNumber, sessionId) {
 app.post('/api/pair', async (req, res) => {
   let { phone } = req.body;
   if (!phone) return res.status(400).json({ success: false, error: 'Numéro requis' });
-  phone = phone.replace(/[^0-9]/g, '').replace(/^0+/, '');
+  // Garder uniquement les chiffres
+  phone = phone.replace(/[^0-9]/g, '');
   if (phone.length < 9) return res.status(400).json({ success: false, error: 'Numéro invalide' });
   const sessionId = 'session_' + phone + '_' + Date.now();
   res.json({ success: true, sessionId });
@@ -403,7 +418,11 @@ app.get('/api/code/:sessionId', (req, res) => {
 });
 
 app.get('/api/stats', (req, res) => {
-  res.json({ sessions: activeSessions.size, uptime: Math.floor((Date.now()-startTime)/1000), status: 'online' });
+  res.json({
+    sessions: activeSessions.size,
+    uptime:   Math.floor((Date.now() - startTime) / 1000),
+    status:   'online'
+  });
 });
 
 app.get('/',        (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
@@ -413,5 +432,12 @@ app.get('/connect', (req, res) => res.sendFile(path.join(__dirname, 'public', 'c
 //   DÉMARRAGE
 // ════════════════════════════════════════
 app.listen(PORT, () => {
-  console.log(`\n╔══════════════════════════╗\n║   ${BOT_NAME} v2.0   ║\n╚══════════════════════════╝\n🚀 Port     : ${PORT}\n👤 Créateur : ${CREATOR} 🇬🇳\n📱 Contact  : ${CONTACT}\n`);
+  console.log(
+    `\n╔══════════════════════════╗` +
+    `\n║   ${BOT_NAME} v2.0   ║` +
+    `\n╚══════════════════════════╝` +
+    `\n🚀 Port     : ${PORT}` +
+    `\n👤 Créateur : ${CREATOR} 🇬🇳` +
+    `\n📱 Contact  : ${CONTACT}\n`
+  );
 });
