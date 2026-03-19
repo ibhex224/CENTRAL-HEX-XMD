@@ -9,7 +9,7 @@
     :root{--black:#0a0a0a;--white:#f5f5f0;--gray:#1a1a1a;--mid:#888;--border:rgba(255,255,255,0.12);}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html{scroll-behavior:smooth;}
-    body{background:var(--black);color:var(--white);font-family:'DM Sans',sans-serif;overflow-x:hidden;cursor:none;}
+    body{background:var(--black);color:var(--white);font-family:'DM Sans',sans-serif;overflow-x:hidden;}
     .cursor{width:12px;height:12px;background:#fff;border-radius:50%;position:fixed;pointer-events:none;z-index:9999;mix-blend-mode:difference;}
     .cursor-ring{width:36px;height:36px;border:1px solid rgba(255,255,255,0.5);border-radius:50%;position:fixed;pointer-events:none;z-index:9998;transition:width 0.3s,height 0.3s;mix-blend-mode:difference;}
     body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:0.4;}
@@ -20,7 +20,7 @@
     .live-dot{display:inline-block;width:8px;height:8px;background:#4ade80;border-radius:50%;position:relative;margin-right:0.5rem;vertical-align:middle;}
     .live-dot::after{content:'';position:absolute;inset:-4px;background:#4ade80;border-radius:50%;animation:pulse 2s infinite;}
     @keyframes pulse{0%,100%{opacity:0.3;transform:scale(1)}50%{opacity:0;transform:scale(1.4)}}
-    .ticker-wrap{overflow:hidden;padding:0.8rem 0;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.01);margin-top:60px;}
+    .ticker-wrap{overflow:hidden;padding:0.8rem 0;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.01);margin-top:var(--nav-h,62px);}
     .ticker{display:flex;white-space:nowrap;animation:ticker 18s linear infinite;}
     .ticker-item{font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.2em;color:var(--mid);text-transform:uppercase;padding:0 2rem;}
     .ticker-item::after{content:' //';color:rgba(136,136,136,0.3);}
@@ -45,7 +45,7 @@
     .stat-item:last-child{border-right:none;}
     .stat-num{font-family:'Bebas Neue',sans-serif;font-size:3.5rem;line-height:1;}
     .stat-label{font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;color:var(--mid);margin-top:0.4rem;text-transform:uppercase;}
-    .section{padding:6rem 3rem;max-width:1200px;margin:0 auto;}
+    .section{padding:6rem 3rem;max-width:1200px;margin:0 auto;scroll-margin-top:70px;}
     .section-label{font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.3em;color:var(--mid);text-transform:uppercase;margin-bottom:1rem;}
     .section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,6vw,5rem);line-height:1;margin-bottom:3rem;}
     .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);}
@@ -55,7 +55,7 @@
     .feature-num{font-family:'Bebas Neue',sans-serif;font-size:5rem;color:rgba(255,255,255,0.04);position:absolute;top:1rem;right:1.5rem;line-height:1;}
     .feature-title{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:0.05em;margin-bottom:0.8rem;}
     .feature-desc{font-size:0.85rem;color:var(--mid);line-height:1.7;}
-    .connect-section{padding:6rem 3rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:3rem;flex-wrap:wrap;max-width:1200px;margin:0 auto;}
+    .connect-section{scroll-margin-top:70px;padding:6rem 3rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:3rem;flex-wrap:wrap;max-width:1200px;margin:0 auto;}
     .connect-left{flex:1;min-width:280px;}
     .connect-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,5vw,4rem);line-height:1;margin-bottom:1rem;}
     .connect-desc{font-size:0.9rem;color:var(--mid);line-height:1.7;}
@@ -75,7 +75,7 @@
     .reveal{opacity:0;transform:translateY(30px);transition:opacity 0.7s ease,transform 0.7s ease;}
     .reveal.visible{opacity:1;transform:translateY(0);}
     @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-    @media(max-width:600px){nav{padding:1rem 1.5rem;}.section,.connect-section,.creator-section{padding:4rem 1.5rem;}footer{padding:2rem 1.5rem;}.stats-bar{flex-direction:column;}.stat-item{border-right:none;border-bottom:1px solid var(--border);}}
+    @media(min-width:601px){body{cursor:none;}}@media(max-width:600px){nav{padding:1rem 1.5rem;}.section,.connect-section,.creator-section{padding:4rem 1.5rem;}footer{padding:2rem 1.5rem;}.stats-bar{flex-direction:column;}.stat-item{border-right:none;border-bottom:1px solid var(--border);}}
   </style>
 </head>
 <body>
@@ -129,7 +129,7 @@
     </div>
   </section>
 
-  <div class="stats-bar reveal">
+  <div class="stats-bar">
     <div class="stat-item"><div class="stat-num" id="statSessions">—</div><div class="stat-label">Sessions Actives</div></div>
     <div class="stat-item"><div class="stat-num">40+</div><div class="stat-label">Commandes</div></div>
     <div class="stat-item"><div class="stat-num">5</div><div class="stat-label">Modules</div></div>
@@ -182,15 +182,21 @@
   </footer>
 
   <script>
+    // Hauteur nav dynamique
+    const navEl=document.querySelector('nav');
+    function updateNavH(){document.documentElement.style.setProperty('--nav-h',navEl.offsetHeight+'px');}
+    updateNavH();window.addEventListener('resize',updateNavH);
     const cursor=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
     let mx=0,my=0,rx=0,ry=0;
     document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx-6+'px';cursor.style.top=my-6+'px';});
     function animRing(){rx+=(mx-rx)*0.12;ry+=(my-ry)*0.12;ring.style.left=rx-18+'px';ring.style.top=ry-18+'px';requestAnimationFrame(animRing);}
     animRing();
     const reveals=document.querySelectorAll('.reveal');
-    const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);}});},{threshold:0.1});
+    const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);}});},{threshold:0.1,rootMargin:'0px 0px -20px 0px'});
     reveals.forEach(r=>obs.observe(r));
-    async function loadStats(){try{const r=await fetch('/api/stats');const d=await r.json();document.getElementById('statSessions').textContent=d.sessions;}catch(e){}}
+    // Déclencher immédiatement les éléments déjà dans le viewport
+    setTimeout(()=>{reveals.forEach(r=>{const rect=r.getBoundingClientRect();if(rect.top<window.innerHeight)r.classList.add('visible');});},50);
+    async function loadStats(){try{const r=await fetch('/api/stats');const d=await r.json();document.getElementById('statSessions').textContent=d.sessions;}catch(e){console.warn('Stats fetch failed:',e);}}
     loadStats();setInterval(loadStats,5000);
   </script>
 </body>
