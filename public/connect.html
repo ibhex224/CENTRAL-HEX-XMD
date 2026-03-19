@@ -107,7 +107,7 @@
         <p class="form-label">📱 Numéro WhatsApp</p>
         <div class="input-wrapper">
           <span class="input-icon">📲</span>
-          <input type="tel" id="phoneInput" placeholder="Ex: 224621963059" maxlength="15"/>
+          <input type="tel" id="phoneInput" placeholder="Ex: 224666952949" maxlength="15"/>
         </div>
 
         <button class="btn-generate" id="generateBtn" onclick="generateCode()">
@@ -180,7 +180,7 @@
       // Annuler tout countdown précédent
       if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}
       document.getElementById('codeSection').classList.remove('show');
-      if(!phone||phone.length<9||!/^[0-9]+$/.test(phone)){errorMsg.textContent='⚠ Numéro invalide. Chiffres seulement. Ex: 224621963059';errorMsg.classList.add('show');return;}
+      if(!phone||phone.length<9||!/^[0-9]+$/.test(phone)){errorMsg.textContent='⚠ Numéro invalide. Chiffres seulement. Ex: 224666952949';errorMsg.classList.add('show');return;}
       btn.classList.add('loading');btnText.textContent='Connexion au serveur...';
       try{
         const res=await fetch('/api/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone})});
@@ -244,5 +244,4 @@
   </script>
 </body>
 </html>
-
 
