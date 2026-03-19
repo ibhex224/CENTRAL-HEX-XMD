@@ -42,7 +42,7 @@ if (!fs.existsSync('./sessions')) fs.mkdirSync('./sessions');
 //   MENU .help
 // ════════════════════════════════════════
 function buildHelpMenu() {
-  return `╔══════════════════════╗
+  return `╔═══════════════════╗
 ║   CENTRAL-HEX-XDM    ║
 ║   by Ibsacko 🥷CHX🇬🇳 ║
 ╚═══════════════════╝
@@ -145,114 +145,72 @@ async function createSession(phoneNumber, sessionId) {
   sock.ev.on('creds.update', saveCreds);
 
   // ════════════════════════════════════
-  //   CONNEXION & PAIRING CODE CORRIGÉ
+  //   ✅ PAIRING CODE — BONNE MÉTHODE
+  //   Appelé juste après création socket
+  //   PAS dans connection.update
+  // ════════════════════════════════════
+  if (!sock.authState.creds.registered) {
+    // Attendre que le socket soit prêt
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      // Numéro propre : chiffres seulement
+      const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+      console.log(`📱 Demande pairing code pour: ${cleanNumber}`);
+
+      const code = await sock.requestPairingCode(cleanNumber);
+      const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
+
+      sessionCache.set(sessionId, {
+        code: formattedCode,
+        status: 'pending',
+        phone: cleanNumber
+      });
+      console.log(`✅ Pairing code: ${formattedCode}`);
+    } catch (err) {
+      console.error('❌ Erreur pairing:', err.message);
+      sessionCache.set(sessionId, {
+        code: null,
+        status: 'error',
+        error: err.message
+      });
+    }
+  }
+
+  // ════════════════════════════════════
+  //   CONNEXION
   // ════════════════════════════════════
   sock.ev.on('connection.update', async ({ connection, lastDisconnect }) => {
-    console.log(`📡 Status connexion: ${connection}`);
 
-    // ✅ Demander le code UNIQUEMENT quand connecting et non enregistré
-    if (connection === 'connecting' && !sock.authState.creds.registered) {
-      const sessionData = sessionCache.get(sessionId);
-      if (sessionData?.codeRequested) return; // Éviter double demande
-
-      try {
-        sessionCache.set(sessionId, { status: 'requesting_code', codeRequested: true });
-
-        // Nettoyer et formater le numéro
-        let cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
-        
-        // Ajouter indicatif 224 si absent (pour Guinée)
-        if (!cleanNumber.startsWith('224') && cleanNumber.length === 9) {
-          cleanNumber = '224' + cleanNumber;
-        }
-        
-        console.log(`📱 Demande pairing code pour: ${cleanNumber}`);
-
-        // Attendre que le socket soit prêt puis demander le code
-        let code = null;
-        let attempts = 0;
-        const maxAttempts = 5;
-        
-        while (!code && attempts < maxAttempts) {
-          try {
-            // Attendre avant chaque tentative
-            await new Promise(r => setTimeout(r, attempts === 0 ? 3000 : 2000));
-            code = await sock.requestPairingCode(cleanNumber);
-          } catch (err) {
-            attempts++;
-            console.log(`⚠️ Tentative ${attempts}/${maxAttempts} échouée: ${err.message}`);
-          }
-        }
-
-        if (!code) {
-          throw new Error('Impossible d\'obtenir le code après ' + maxAttempts + ' tentatives');
-        }
-
-        const formattedCode = code.match(/.{1,4}/g)?.join('-') || code;
-
-        sessionCache.set(sessionId, {
-          code: formattedCode,
-          status: 'pending',
-          phone: cleanNumber,
-          codeRequested: true
-        });
-        
-        console.log(`✅ Pairing code généré: ${formattedCode}`);
-
-      } catch (err) {
-        console.error('❌ Erreur pairing:', err.message);
-        sessionCache.set(sessionId, {
-          code: null,
-          status: 'error',
-          error: err.message,
-          codeRequested: true
-        });
-      }
-    }
-
-    // ✅ Connecté avec succès
     if (connection === 'open') {
       console.log(`🟢 Bot connecté !`);
       activeSessions.set(sessionId, sock);
-      
-      const currentData = sessionCache.get(sessionId) || {};
-      sessionCache.set(sessionId, { 
-        ...currentData,
-        status: 'connected', 
-        phone: phoneNumber
+      sessionCache.set(sessionId, { status: 'connected', phone: phoneNumber });
+
+      const cleanJID = phoneNumber.replace(/[^0-9]/g, '');
+      await sock.sendMessage(cleanJID + '@s.whatsapp.net', {
+        image: { url: BOT_IMG },
+        caption:
+          `╔══════════════════════╗\n` +
+          `║   CENTRAL-HEX-XDM    ║\n` +
+          `╚══════════════════════╝\n\n` +
+          `✅ *Bot connecté avec succès !*\n\n` +
+          `👤 Créateur : ${CREATOR} 🇬🇳\n` +
+          `📱 Contact  : ${CONTACT}\n` +
+          `⚡ Version  : 2.0\n\n` +
+          `_Tape_ *.help* _pour voir toutes les commandes_ 🚀`
       });
 
-      // Envoyer message de confirmation
-      const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
-      const fullNumber = cleanNumber.startsWith('224') ? cleanNumber : '224' + cleanNumber;
-      
-      try {
-        await sock.sendMessage(fullNumber + '@s.whatsapp.net', {
-          image: { url: BOT_IMG },
-          caption:
-            `╔══════════════════════╗\n` +
-            `║   CENTRAL-HEX-XDM    ║\n` +
-            `╚══════════════════════╝\n\n` +
-            `✅ *Bot connecté avec succès !*\n\n` +
-            `👤 Créateur : ${CREATOR} 🇬🇳\n` +
-            `📱 Contact  : ${CONTACT}\n` +
-            `⚡ Version  : 2.0\n\n` +
-            `_Tape_ *.help* _pour voir toutes les commandes_ 🚀`
-        });
-      } catch (e) {
-        console.log('⚠️ Message de confirmation non envoyé:', e.message);
-      }
-    } 
-    
-    // 🔴 Déconnexion
-    else if (connection === 'close') {
-      const statusCode = lastDisconnect?.error?.output?.statusCode;
+    } else if (connection === 'close') {
+      const statusCode     = lastDisconnect?.error?.output?.statusCode;
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
       console.log(`🔴 Connexion fermée. Code: ${statusCode}. Reconnexion: ${shouldReconnect}`);
-      activeSessions.delete(sessionId);
-      
       if (shouldReconnect) {
-        setTimeout(() => createSession(phoneNumber, sessionId), 5000);
+        setTimeout(() => {
+          activeSessions.delete(sessionId);
+          createSession(phoneNumber, sessionId);
+        }, 5000);
+      } else {
+        activeSessions.delete(sessionId);
       }
     }
   });
@@ -300,9 +258,9 @@ async function createSession(phoneNumber, sessionId) {
       await sock.sendMessage(from, { image: { url: BOT_IMG }, caption: buildHelpMenu() });
     }
     else if (cmd === `${PREFIX}ping`) {
-      const ms = Date.now();
+      const msStart = Date.now();
       await sock.sendMessage(from, {
-        text: `╭━━〔 🏓 PING 〕━━┈⊷\n┃✰│ Pong : ${Date.now() - ms}ms\n┃✰│ Status : En ligne ✅\n╰━━━━━━━━━━━━━━━┈⊷`
+        text: `╭━━〔 🏓 PING 〕━━┈⊷\n┃✰│ Pong : ${Date.now() - msStart}ms\n┃✰│ Status : En ligne ✅\n╰━━━━━━━━━━━━━━━┈⊷`
       });
     }
     else if (cmd === `${PREFIX}stats`) {
@@ -387,9 +345,9 @@ async function createSession(phoneNumber, sessionId) {
     else if (cmd.startsWith(`${PREFIX}love`)) {
       const pct = Math.floor(Math.random() * 101);
       const bar = '❤️'.repeat(Math.floor(pct/10)) + '🖤'.repeat(10-Math.floor(pct/10));
-      const msg = pct > 80 ? '🔥 C\'est l\'amour fou !' : pct > 50 ? '💛 Ça promet !' : '💔 Peut mieux faire...';
+      const loveMsg = pct > 80 ? '🔥 C\'est l\'amour fou !' : pct > 50 ? '💛 Ça promet !' : '💔 Peut mieux faire...';
       await sock.sendMessage(from, {
-        text: `╭━━〔 💕 LOVE METER 〕━━┈⊷\n┃✰│ ${bar}\n┃✰│ Score : *${pct}%*\n┃✰│ ${msg}\n╰━━━━━━━━━━━━━━━┈⊷`
+        text: `╭━━〔 💕 LOVE METER 〕━━┈⊷\n┃✰│ ${bar}\n┃✰│ Score : *${pct}%*\n┃✰│ ${loveMsg}\n╰━━━━━━━━━━━━━━━┈⊷`
       });
     }
     else if (cmd === `${PREFIX}tagall` || cmd.startsWith(`${PREFIX}hidetag`)) {
@@ -450,14 +408,11 @@ async function createSession(phoneNumber, sessionId) {
 app.post('/api/pair', async (req, res) => {
   let { phone } = req.body;
   if (!phone) return res.status(400).json({ success: false, error: 'Numéro requis' });
-  
   // Garder uniquement les chiffres
   phone = phone.replace(/[^0-9]/g, '');
   if (phone.length < 9) return res.status(400).json({ success: false, error: 'Numéro invalide' });
-  
   const sessionId = 'session_' + phone + '_' + Date.now();
   res.json({ success: true, sessionId });
-  
   createSession(phone, sessionId).catch(err =>
     sessionCache.set(sessionId, { status: 'error', error: err.message })
   );
