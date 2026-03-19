@@ -8,7 +8,7 @@
   <style>
     :root{--black:#0a0a0a;--white:#f5f5f0;--gray:#1a1a1a;--mid:#888;--border:rgba(255,255,255,0.12);--success:#4ade80;--danger:#ff4444;}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    body{background:var(--black);color:var(--white);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;cursor:none;}
+    body{background:var(--black);color:var(--white);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;}
     .cursor{width:12px;height:12px;background:#fff;border-radius:50%;position:fixed;pointer-events:none;z-index:9999;mix-blend-mode:difference;}
     .cursor-ring{width:36px;height:36px;border:1px solid rgba(255,255,255,0.5);border-radius:50%;position:fixed;pointer-events:none;z-index:9998;transition:width 0.3s,height 0.3s;mix-blend-mode:difference;}
     body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:0.4;}
@@ -48,8 +48,8 @@
     .spinner{display:none;width:18px;height:18px;border:2px solid rgba(136,136,136,0.3);border-top-color:var(--mid);border-radius:50%;animation:spin 0.8s linear infinite;}
     .btn-generate.loading .spinner{display:block;}
     @keyframes spin{to{transform:rotate(360deg)}}
-    .code-section{margin-top:1.5rem;display:none;animation:fadeUp 0.5s both;}
-    .code-section.show{display:block;}
+    .code-section{margin-top:1.5rem;opacity:0;max-height:0;overflow:hidden;transition:opacity 0.5s ease,max-height 0.5s ease;}
+    .code-section.show{opacity:1;max-height:600px;overflow:visible;}
     .code-label{font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:0.2em;color:var(--mid);text-transform:uppercase;margin-bottom:0.7rem;}
     .code-box{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);padding:1.2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;}
     .code-value{font-family:'Bebas Neue',sans-serif;font-size:2.5rem;letter-spacing:0.2em;}
@@ -75,6 +75,7 @@
     .alert.show{display:block;}
     footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:1.2rem 2rem;display:flex;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap;}
     .footer-text{font-family:'Space Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;color:rgba(136,136,136,0.5);text-transform:uppercase;}
+    @media(min-width:601px){body{cursor:none;}}
   </style>
 </head>
 <body>
@@ -165,7 +166,7 @@
         document.getElementById('statSessions').textContent=d.sessions;
         const u=d.uptime;const h=Math.floor(u/3600),m=Math.floor((u%3600)/60),s=u%60;
         document.getElementById('statUptime').textContent=u<60?s+'s':u<3600?m+'m':h+'h'+m+'m';
-      }catch(e){}
+      }catch(e){console.warn('Stats fetch failed:',e);}
     }
     loadStats();setInterval(loadStats,5000);
     let countdownTimer=null;
@@ -176,7 +177,10 @@
       const btn=document.getElementById('generateBtn');
       const btnText=document.getElementById('btnText');
       errorMsg.classList.remove('show');successMsg.classList.remove('show');
-      if(!phone||phone.length<9||isNaN(phone)){errorMsg.textContent='⚠ Numéro invalide. Ex: 224621963059';errorMsg.classList.add('show');return;}
+      // Annuler tout countdown précédent
+      if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}
+      document.getElementById('codeSection').classList.remove('show');
+      if(!phone||phone.length<9||!/^[0-9]+$/.test(phone)){errorMsg.textContent='⚠ Numéro invalide. Chiffres seulement. Ex: 224621963059';errorMsg.classList.add('show');return;}
       btn.classList.add('loading');btnText.textContent='Connexion au serveur...';
       try{
         const res=await fetch('/api/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone})});
@@ -198,13 +202,17 @@
           if(data.status==='pending'&&data.code){clearInterval(poll);showCode(data.code);btn.classList.remove('loading');btnText.textContent='⚡ Générer le Code ⚡';}
           else if(data.status==='connected'){clearInterval(poll);btn.classList.remove('loading');btnText.textContent='⚡ Générer le Code ⚡';successMsg.textContent='✅ Bot connecté ! Vérifie tes messages WhatsApp.';successMsg.classList.add('show');}
           else if(data.status==='error'){clearInterval(poll);btn.classList.remove('loading');btnText.textContent='⚡ Générer le Code ⚡';errorMsg.textContent='❌ '+(data.error||'Erreur inconnue');errorMsg.classList.add('show');}
-          else if(attempts>20){clearInterval(poll);btn.classList.remove('loading');btnText.textContent='⚡ Générer le Code ⚡';errorMsg.textContent='⏱ Délai dépassé. Réessaie.';errorMsg.classList.add('show');}
-        }catch(e){}
+          else if(attempts>40){clearInterval(poll);btn.classList.remove('loading');btnText.textContent='⚡ Générer le Code ⚡';errorMsg.textContent='⏱ Délai dépassé (60s). Vérifie ton numéro et réessaie.';errorMsg.classList.add('show');}
+        }catch(e){
+          console.warn('Polling erreur:',e);
+          // Arrêter si trop d'erreurs réseau consécutives
+          if(attempts>5){clearInterval(poll);btn.classList.remove('loading');btnText.textContent='⚡ Générer le Code ⚡';errorMsg.textContent='❌ Erreur réseau. Vérifie ta connexion.';errorMsg.classList.add('show');}
+        }
       },1500);
     }
     function showCode(code){
       const parts=code.split('-');
-      document.getElementById('codeDisplay').innerHTML=(parts[0]||'----')+'<span class="sep">-</span>'+(parts[1]||'----');
+      document.getElementById('codeDisplay').innerHTML=(parts[0]||'----')+'<span class="sep">-</span>'+(parts[1]||'----')+'<span class="sep">-</span>'+(parts[2]||'----')+'<span class="sep">-</span>'+(parts[3]||'----');
       document.getElementById('codeSection').classList.add('show');
       if(countdownTimer)clearInterval(countdownTimer);
       let t=60;
@@ -213,11 +221,28 @@
       countdownTimer=setInterval(()=>{t--;fill.style.width=(t/60*100)+'%';txt.textContent='Expire dans '+t+'s';if(t<=0){clearInterval(countdownTimer);txt.textContent='⚠ Code expiré — Regénère un nouveau code';fill.style.width='0%';}},1000);
     }
     function copyCode(){
-      const code=document.getElementById('codeDisplay').textContent;
-      navigator.clipboard.writeText(code).then(()=>{const b=document.querySelector('.copy-btn');b.textContent='✓ Copié';setTimeout(()=>b.textContent='Copier',2000);});
+      // Récupérer uniquement le texte brut du code sans les séparateurs HTML dupliqués
+      const parts=[...document.getElementById('codeDisplay').querySelectorAll('span:not(.sep)')];
+      const code=parts.length
+        ? parts.map(s=>s.textContent).join('-')
+        : document.getElementById('codeDisplay').innerText.replace(/\s+/g,'');
+      navigator.clipboard.writeText(code).then(()=>{
+        const b=document.querySelector('.copy-btn');
+        b.textContent='✓ Copié';
+        setTimeout(()=>b.textContent='Copier',2000);
+      }).catch(()=>{
+        // Fallback si clipboard API indisponible
+        const ta=document.createElement('textarea');
+        ta.value=code;ta.style.position='fixed';ta.style.opacity='0';
+        document.body.appendChild(ta);ta.select();
+        document.execCommand('copy');document.body.removeChild(ta);
+        const b=document.querySelector('.copy-btn');
+        b.textContent='✓ Copié';setTimeout(()=>b.textContent='Copier',2000);
+      });
     }
     document.getElementById('phoneInput').addEventListener('keydown',e=>{if(e.key==='Enter')generateCode();});
   </script>
 </body>
 </html>
+
 
