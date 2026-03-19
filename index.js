@@ -23,7 +23,7 @@ const app      = express();
 const PORT     = process.env.PORT || 3000;
 const BOT_NAME = 'CENTRAL-HEX-XDM';
 const CREATOR  = 'Ibrahima Sory Sacko';
-const CONTACT  = '+224 621 96 30 59';
+const CONTACT  = '+224 666 95 29 49';
 const PREFIX   = '.';
 const BOT_IMG  = 'https://i.ibb.co/sp7vYJt5/1772381137526.png';
 
@@ -42,7 +42,7 @@ if (!fs.existsSync('./sessions')) fs.mkdirSync('./sessions');
 //   MENU .help
 // ════════════════════════════════════════
 function buildHelpMenu() {
-  return `╔═══════════════════╗
+  return `╔════════════════╗
 ║   CENTRAL-HEX-XDM    ║
 ║   by Ibsacko 🥷CHX🇬🇳 ║
 ╚═══════════════════╝
